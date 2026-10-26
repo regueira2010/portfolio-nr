@@ -61,6 +61,30 @@ Módulo backend para el cálculo automatizado de costos operativos de transporte
 
 ---
 
+## ☁️ Arquitectura Cloud & Pipeline CI/CD
+
+El portafolio se auto-despliega mediante un pipeline automatizado hacia **Amazon Web Services (AWS)** con arquitectura de **Costo \$0 (Free Tier)** y bucket 100% privado:
+
+```mermaid
+flowchart LR
+    A[💻 Git Push main] --> B[⚙️ GitHub Actions]
+    B --> C[📦 Vite Build & Minify]
+    C --> D[🪣 AWS S3 Privado]
+    D --> E[🛡️ CloudFront + OAC]
+    E --> F[⚡ Edge Cache $0 USD]
+```
+
+### Decisiones de Arquitectura y DevOps:
+* **S3 100% Privado con OAC (Origin Access Control):** El bucket no tiene acceso público habilitado (`Block Public Access` activo). Solo la distribución de CloudFront tiene permisos delegados mediante firma SigV4 (`AWS:SourceArn`).
+* **Estrategia Granular de Caché (`Cache-Control`):**
+  - Assets inmutables (`/assets/*.js`, `/assets/*.css`): cacheados a **1 año inmutable** (`max-age=31536000, immutable`).
+  - Archivos raíz (`index.html`, `favicon.svg`, `robots.txt`, `sitemap.xml`): revalidación inmediata (`max-age=0, must-revalidate`).
+* **Routing SPA en Edge:** CloudFront gestiona las respuestas de error `403` y `404` redirigiéndolas transparentemente a `/index.html` con código HTTP `200`, permitiendo la recarga en rutas cliente sin fallos.
+* **Invalidación Automática:** Cada push invalida la caché de CloudFront (`/*`) consumiendo la cuota gratuita de 1.000 invalidaciones mensuales de AWS.
+* **FinOps / Sin WAF:** No se habilita AWS WAF para evitar los costos fijos de \$5 USD/mes, manteniéndose íntegramente dentro de la capa gratuita permanente (1 TB transferencia mensual y 10.000.000 peticiones en CloudFront).
+
+---
+
 ## 🛠️ Comandos de Desarrollo
 
 ```bash
